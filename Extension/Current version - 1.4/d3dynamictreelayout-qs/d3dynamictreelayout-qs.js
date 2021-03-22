@@ -57,94 +57,83 @@ function ( qlik, extension_properties, d3, rvr_tree ) {
 					if(treeProperties.treeMeasure.activateManualMeasure){
 						// $element.html( "Data with measures" );
 
-						app.createCube({
-							qDimensions : [
-								{ qDef : {qFieldDefs : ["="+treeProperties.treeStructure.nodeDepth],
-													   	qSortCriterias: [ qSortCriteriasContents ] } },
-								{ qDef : {qFieldDefs: ["="+treeProperties.treeStructure.nodeID]} },
-								{ qDef : {qFieldDefs: ["="+treeProperties.treeStructure.parentNodeID]} },
-								{ qDef : {qFieldDefs: ["="+treeProperties.treeStructure.nodeName]} }
-							],
-							qMeasures : [
-								{ qDef : { qDef : "="+treeProperties.treeMeasure.measure } }
-							],
-							qInitialDataFetch : [
-								{ qHeight : 1000, qWidth : 5 }
-							]
-						}, function (reply) { launchTree(reply, $element, "tree"+layout.qInfo.qId, treeProperties); });
+						// Create Custom Object HyperCube, to fetch initial values.
+// This cube communicates with other visualisations and selections
+app.createCube({
+	qDimensions : [
+		{ qDef : {qFieldDefs : ["="+treeProperties.treeStructure.nodeDepth],
+									qSortCriterias: [ {qSortByNumeric: 1} ] } },
+		{ qDef : {qFieldDefs: ["="+treeProperties.treeStructure.nodeID]} },
+		{ qDef : {qFieldDefs: ["="+treeProperties.treeStructure.parentNodeID]} },
+		{ qDef : {qFieldDefs: ["="+treeProperties.treeStructure.nodeName]} }
+	],
+	qMeasures : [
+		{ qDef : { qDef : vMeasure } },
+		{ qDef : { qDef : "="+treeProperties.treeLayout.leaf.strokeColor } },
+		{ qDef : { qDef : "="+treeProperties.treeLayout.leaf.parentFillColor } },
+		{ qDef : { qDef : "="+treeProperties.treeLayout.leaf.childFillColor } },
+		{ qDef : { qDef : "="+treeProperties.treeLayout.link.strokeColor } },
+		{ qDef : { qDef : "="+treeProperties.treeLayout.leaf.nodeFontColor } }
+	],
+	qInitialDataFetch : [
+		{ qHeight : 1, qWidth : 10 }
+	]
+}, function (reply) { 
+	// Calculate Total Columns and Rows
+	var columns = reply.qHyperCube.qSize.qcx;  
+	var totalRows = reply.qHyperCube.qSize.qcy;
 
-					}else{
-						// $element.html( "Data without measures" );
-						app.createCube({
-							qDimensions : [
-								{ qDef : {qFieldDefs : ["="+treeProperties.treeStructure.nodeDepth],
-													   	qSortCriterias: [ qSortCriteriasContents ] } },
-								{ qDef : {qFieldDefs: ["="+treeProperties.treeStructure.nodeID]} },
-								{ qDef : {qFieldDefs: ["="+treeProperties.treeStructure.parentNodeID]} },
-								{ qDef : {qFieldDefs: ["="+treeProperties.treeStructure.nodeName]} }
-							],
-							qMeasures : [
-								{ qDef : { qDef : "1" } }
-							],
-							qInitialDataFetch : [
-								{ qHeight : 1000, qWidth : 5 }
-							]
-						}, function (reply) { 
-							launchTree(reply, $element, "tree"+layout.qInfo.qId, treeProperties); });
-					}	
-				}else{//dynamic colors
-					if(treeProperties.treeMeasure.activateManualMeasure){
-						$element.html( "Data with measures 2" );
+	// Calculate Rows per Page. Get HyperCubeData is limited to 10000 Cells (colums*rows)
+	var pageHeight = Math.floor(10000 / columns);
+	var numberOfPages = Math.ceil(totalRows / pageHeight);
 
-						app.createCube({
-							qDimensions : [
-								{ qDef : {qFieldDefs : ["="+treeProperties.treeStructure.nodeDepth],
-													   	qSortCriterias: [ qSortCriteriasContents ] } },
-								{ qDef : {qFieldDefs: ["="+treeProperties.treeStructure.nodeID]} },
-								{ qDef : {qFieldDefs: ["="+treeProperties.treeStructure.parentNodeID]} },
-								{ qDef : {qFieldDefs: ["="+treeProperties.treeStructure.nodeName]} }
-							],
-							qMeasures : [
-								{ qDef : { qDef : "="+treeProperties.treeMeasure.measure } },
-								{ qDef : { qDef : "="+treeProperties.treeLayout.leaf.strokeColor } },
-								{ qDef : { qDef : "="+treeProperties.treeLayout.leaf.parentFillColor } },
-								{ qDef : { qDef : "="+treeProperties.treeLayout.leaf.childFillColor } },
-								{ qDef : { qDef : "="+treeProperties.treeLayout.link.strokeColor } }
-							],
-							qInitialDataFetch : [
-								{ qHeight : 1000, qWidth : 9 }
-							]
-						}, function (reply) { launchTree(reply, $element, "tree"+layout.qInfo.qId, treeProperties); });
+	// Create Dummy Cube to actually fetch all DataPages of the HyperCube
+	app.createCube({
+		qDimensions : [
+			{ qDef : {qFieldDefs : ["="+treeProperties.treeStructure.nodeDepth],
+							qSortCriterias: [ {qSortByNumeric: 1} ] } },
+			{ qDef : {qFieldDefs: ["="+treeProperties.treeStructure.nodeID]} },
+			{ qDef : {qFieldDefs: ["="+treeProperties.treeStructure.parentNodeID]} },
+			{ qDef : {qFieldDefs: ["="+treeProperties.treeStructure.nodeName]} }
+		],
+		qMeasures : [
+			{ qDef : { qDef : vMeasure } },
+			{ qDef : { qDef : "="+treeProperties.treeLayout.leaf.strokeColor } },
+			{ qDef : { qDef : "="+treeProperties.treeLayout.leaf.parentFillColor } },
+			{ qDef : { qDef : "="+treeProperties.treeLayout.leaf.childFillColor } },
+			{ qDef : { qDef : "="+treeProperties.treeLayout.link.strokeColor } },
+			{ qDef : { qDef : "="+treeProperties.treeLayout.leaf.nodeFontColor } }
+		]
+	}).then(function(reply) {
 
-					}else{
+		// Set variable Function to fetch multiple pages of records from Hypercube
+		var promises = Array.apply(null, Array(numberOfPages)).map(function(data, index) {
+			var page = {
+				 qTop: (pageHeight * index),
+				 qLeft: 0,
+				 qWidth: columns,
+				 qHeight: pageHeight,
+				 index: index
+			};
+			return reply.getHyperCubeData('/qHyperCubeDef', [page]);  
+		}, this);
 
-						// $element.html( "Data without measures 2" );
-						app.createCube({
-							qDimensions : [
-								{ qDef : {qFieldDefs : ["="+treeProperties.treeStructure.nodeDepth],
-													   	qSortCriterias: [ qSortCriteriasContents ] } },
-								{ qDef : {qFieldDefs: ["="+treeProperties.treeStructure.nodeID]} },
-								{ qDef : {qFieldDefs: ["="+treeProperties.treeStructure.parentNodeID]} },
-								{ qDef : {qFieldDefs: ["="+treeProperties.treeStructure.nodeName]} }
-							],
-							qMeasures : [
-								{ qDef : { qDef : "1" } },
-								{ qDef : { qDef : "="+treeProperties.treeLayout.leaf.strokeColor } },
-								{ qDef : { qDef : "="+treeProperties.treeLayout.leaf.parentFillColor } },
-								{ qDef : { qDef : "="+treeProperties.treeLayout.leaf.childFillColor } },
-								{ qDef : { qDef : "="+treeProperties.treeLayout.link.strokeColor } }
-							],
-							qInitialDataFetch : [
-								{ qHeight : 1000, qWidth : 9 }
-							]
-						}, function (reply) { launchTree(reply, $element, "tree"+layout.qInfo.qId, treeProperties); });
-					}
-				}
+		// Push all values to the reply and resolve the promise to force asynchronous functionality
+		Promise.all(promises).then(function(data) {
+
+			for (var j=0; j<data.length; j++) {
+				reply.layout.qHyperCube.qDataPages.push(data[j][0]);
 			}
-		}
-	};
+			Promise.resolve(reply);
 
-} );
+		}).then(function(){
+
+			// When the Promise is resolved and all data is loaded, it is time to launch the tree
+			launchTree(reply.layout, $element, "tree"+reply.layout.qInfo.qId, treeProperties);
+
+		}); // Promise.all().then(function(data) {
+	}); // app.createCube({)}.then(function(reply) {
+}); // app.createCube({}, function (reply) {
 
 function launchTree(treeData, element, object_id, treeProperties){
 	var maxDepth = treeData.qHyperCube.qDataPages[0].qMatrix[treeData.qHyperCube.qSize.qcy-1][0].qText;
@@ -186,43 +175,35 @@ function launchTree(treeData, element, object_id, treeProperties){
 											 treeData.qHyperCube.qDataPages[0].qMatrix[row_nr][2].qText, //parent_id
 											 treeData.qHyperCube.qDataPages[0].qMatrix[row_nr][3].qText, //name
 											 treeData.qHyperCube.qDataPages[0].qMatrix[row_nr][4].qText, //measure
-											 treeData.qHyperCube.qDataPages[0].qMatrix[row_nr][0].qText, //depth
-											 treeData.qHyperCube.qDataPages[0].qMatrix[row_nr][3].qElemNumber) //name's qElement
+if(load_tree){
 
-						unordered_leafs.push(child);
-						iterator++;
-					}else{//dynamic colors
-						var child = new node(node_id+iterator,
-											 treeData.qHyperCube.qDataPages[0].qMatrix[row_nr][1].qText, //element_id
-											 treeData.qHyperCube.qDataPages[0].qMatrix[row_nr][2].qText, //parent_id
-											 treeData.qHyperCube.qDataPages[0].qMatrix[row_nr][3].qText, //name
-											 treeData.qHyperCube.qDataPages[0].qMatrix[row_nr][4].qText, //measure
-											 treeData.qHyperCube.qDataPages[0].qMatrix[row_nr][0].qText, //depth
-											 treeData.qHyperCube.qDataPages[0].qMatrix[row_nr][3].qElemNumber, //name's qElement
-											 treeData.qHyperCube.qDataPages[0].qMatrix[row_nr][5].qText, //strokeColor
-											 treeData.qHyperCube.qDataPages[0].qMatrix[row_nr][6].qText, //parentFillColor
-											 treeData.qHyperCube.qDataPages[0].qMatrix[row_nr][7].qText, //childFillColor
-											 treeData.qHyperCube.qDataPages[0].qMatrix[row_nr][8].qText) //linkStrokeColor
+	for ( page_nr=0 ; page_nr<= maxPage ; page_nr++){ // iterating trough pages
+		for ( row_nr=0 ; row_nr < treeData.qHyperCube.qDataPages[page_nr].qMatrix.length ; row_nr++ ) { // iterating trough rows
+			var child = new node(node_id+iterator,
+								 treeData.qHyperCube.qDataPages[page_nr].qMatrix[row_nr][1].qText, //element_id
+								 treeData.qHyperCube.qDataPages[page_nr].qMatrix[row_nr][2].qText, //parent_id
+								 treeData.qHyperCube.qDataPages[page_nr].qMatrix[row_nr][3].qText, //name
+								 treeData.qHyperCube.qDataPages[page_nr].qMatrix[row_nr][4].qText, //measure
+								 treeData.qHyperCube.qDataPages[page_nr].qMatrix[row_nr][0].qText, //depth
+								 treeData.qHyperCube.qDataPages[page_nr].qMatrix[row_nr][3].qElemNumber, //name's qElement
+								 treeData.qHyperCube.qDataPages[page_nr].qMatrix[row_nr][5].qText, //strokeColor
+								 treeData.qHyperCube.qDataPages[page_nr].qMatrix[row_nr][6].qText, //parentFillColor
+								 treeData.qHyperCube.qDataPages[page_nr].qMatrix[row_nr][7].qText, //childFillColor
+								 treeData.qHyperCube.qDataPages[page_nr].qMatrix[row_nr][8].qText, //linkStrokeColor
+								 treeData.qHyperCube.qDataPages[page_nr].qMatrix[row_nr][9].qText) //nodeFontColor
 
-						unordered_leafs.push(child);
-						iterator++;	
-					}
-				}
-			}			
+			unordered_leafs.push(child);
+			iterator++;	
 		}
-
-		var tree = growTree(unordered_leafs, maxDepth, minDepth);
-
-		if(!treeProperties.treeLayout.leaf.activateDynamicColors){
-			treeProperties.treeLayout.leaf.strokeColor = treeProperties.treeLayout.leaf.strokeColor.replace("'","").replace("'","");
-			treeProperties.treeLayout.leaf.parentFillColor = treeProperties.treeLayout.leaf.parentFillColor.replace("'","").replace("'","");
-			treeProperties.treeLayout.leaf.childFillColor = treeProperties.treeLayout.leaf.childFillColor.replace("'","").replace("'","");
-			treeProperties.treeLayout.link.strokeColor = treeProperties.treeLayout.link.strokeColor.replace("'","").replace("'","");
-		}
-
-		renderChart(tree, element, object_id, treeProperties)
 	}
-	else{ //something is missing, better not load the hypercube
+
+	// Render the Tree Chart
+	var tree = growTree(unordered_leafs, maxDepth, minDepth);
+
+	// Render the Tree Chart
+	renderChart(tree, element, object_id, treeProperties)
+
+} else { // Something is missing, better not load the hypercube
 		$noDataDiv = $(document.createElement('div'));
 		element.empty();
 		element.append($noDataDiv);
